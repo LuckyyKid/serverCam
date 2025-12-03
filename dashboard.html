@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Helmet Monitor</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            background: #020617;
+            padding: 2rem 3rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            min-width: 320px;
+        }
+
+        h1 {
+            margin-bottom: 1.5rem;
+            font-size: 1.6rem;
+        }
+
+        .status {
+            font-size: 2rem;
+            font-weight: 700;
+            padding: 1rem 2rem;
+            border-radius: 999px;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        .status.ok {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 2px solid #22c55e;
+        }
+
+        .status.danger {
+            background: rgba(248, 113, 113, 0.2);
+            color: #fca5a5;
+            border: 2px solid #ef4444;
+        }
+
+        .status.idle {
+            background: rgba(148, 163, 184, 0.1);
+            color: #cbd5f5;
+            border: 2px solid #64748b;
+        }
+
+        .label {
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.12em;
+            color: #9ca3af;
+        }
+
+        .time {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #9ca3af;
+        }
+
+        .dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            margin-right: 0.4rem;
+        }
+
+        .dot.green {
+            background: #22c55e;
+        }
+
+        .dot.red {
+            background: #ef4444;
+        }
+
+        .dot.gray {
+            background: #6b7280;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>Helmet Safety Monitor</h1>
+
+    <div id="statusText" class="status idle">
+        <span class="dot gray"></span>
+        Waiting for data…
+    </div>
+
+    <div class="label" id="rawLabel">No alert received yet</div>
+    <div class="time" id="timeLabel"></div>
+</div>
+
+<script>
+    async function fetchAlert() {
+        try {
+            const res = await fetch("/alert/next");
+            const data = await res.json();
+            const alert = data.alert;
+
+            const statusEl = document.getElementById("statusText");
+            const rawEl = document.getElementById("rawLabel");
+            const timeEl = document.getElementById("timeLabel");
+
+            if (!alert) {
+                statusEl.className = "status idle";
+                statusEl.innerHTML = '<span class="dot gray"></span> Waiting for data…';
+                rawEl.textContent = "No alert received yet";
+                timeEl.textContent = "";
+                return;
+            }
+
+            const helmet = !!alert.helmet;
+            const noHelmet = !!alert.no_helmet;
+            const receivedAt = alert.received_at || "Unknown time";
+
+            if (noHelmet) {
+                statusEl.className = "status danger";
+                statusEl.innerHTML = '<span class="dot red"></span> NO HELMET DETECTED';
+            } else if (helmet) {
+                statusEl.className = "status ok";
+                statusEl.innerHTML = '<span class="dot green"></span> HELMET OK';
+            } else {
+                statusEl.className = "status idle";
+                statusEl.innerHTML = '<span class="dot gray"></span> No clear detection';
+            }
+
+            rawEl.textContent = `helmet = ${helmet} | no_helmet = ${noHelmet}`;
+            timeEl.textContent = `Last update: ${receivedAt}`;
+        } catch (e) {
+            console.error("Error fetching alert:", e);
+        }
+    }
+
+    // Premier fetch immédiat
+    fetchAlert();
+    // Puis toutes les secondes
+    setInterval(fetchAlert, 1000);
+</script>
+</body>
+</html>

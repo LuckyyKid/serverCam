@@ -1,24 +1,50 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify, render_template
+from datetime import datetime
 
 app = Flask(__name__)
 
+# Dernière alerte reçue depuis RoboFlow
 last_alert = None
+
+
+@app.route("/")
+def index():
+    # Page du dashboard
+    return render_template("dashboard.html")
+
 
 @app.route("/alert", methods=["POST"])
 def alert():
+    """
+    Endpoint appelé par ton script test_robotflow.py
+    """
     global last_alert
-    last_alert = request.json
-    print("Nouvelle alerte reçue :", last_alert)
-    return {"status": "received"}
+    data = request.get_json() or {}
+
+    # On normalise les champs
+    helmet = bool(data.get("helmet"))
+    no_helmet = bool(data.get("no_helmet"))
+
+    last_alert = {
+        "helmet": helmet,
+        "no_helmet": no_helmet,
+        "received_at": datetime.utcnow().isoformat() + "Z"
+    }
+
+    print("🔥 Nouvelle alerte reçue :", last_alert)
+    return jsonify({"status": "received"})
+
 
 @app.route("/alert/next", methods=["GET"])
 def get_alert():
-    global last_alert
-    if last_alert:
-        data = last_alert
-        last_alert = None
-        return {"alert": data}
-    return {"alert": None}
+    """
+    Endpoint consulté par le dashboard (JS) toutes les X secondes
+    """
+    if last_alert is None:
+        return jsonify({"alert": None})
+    return jsonify({"alert": last_alert})
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    # Local uniquement (sur Render, c'est gunicorn qui lance)
+    app.run(host="0.0.0.0", port=5000, debug=True)
