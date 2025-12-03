@@ -19,3 +19,6 @@ def get_alert():
         last_alert = None
         return {"alert": data}
     return {"alert": None}
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
